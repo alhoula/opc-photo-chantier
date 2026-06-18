@@ -340,9 +340,11 @@ async function generateReport(){
   }catch(e){alert("Erreur rapport : "+e.message)}
 }
 
-window.addEventListener("load",async()=>{
+window.addEventListener("load",()=>{
   if(!val("followDate"))$("followDate").value=new Date().toISOString().slice(0,10);
-  await syncFromGitHub();
+  refreshAll();
+  // Sync GitHub en arrière-plan sans bloquer l'affichage
+  setTimeout(()=>syncFromGitHub().catch(e=>setSyncStatus("error","❌ "+e.message)), 100);
 });
 </script>
 </body>
