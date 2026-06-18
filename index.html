@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPC Photo Chantier</title>
+<style>
+:root{--green:#166534;--dark:#0f172a;--line:#e2e8f0;--bg:#f1f5f9}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--dark)}
+header{background:linear-gradient(135deg,#14532d,#166534);color:#fff;padding:16px;position:sticky;top:0;z-index:20}
+header h1{font-size:20px;margin:0} header p{margin:4px 0 0;font-size:13px;opacity:.9}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px;background:#fff;position:sticky;top:72px;z-index:15;border-bottom:1px solid var(--line)}
+nav button{border:0;border-radius:12px;background:#e2e8f0;padding:11px 6px;font-weight:900}
+nav button.active{background:var(--green);color:#fff}
+main{padding:12px;max-width:1100px;margin:auto}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px}
+.hidden{display:none!important}
+h2{font-size:18px;margin:0 0 12px} h3{font-size:16px;margin:14px 0 8px}
+label{display:block;font-size:13px;font-weight:900;color:#334155;margin-bottom:6px}
+input,select{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:12px;font-size:15px;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button,.btnlike{border:0;border-radius:13px;padding:13px 14px;font-weight:900;font-size:14px;cursor:pointer;text-align:center}
+.primary{background:#166534;color:#fff}.secondary{background:#334155;color:#fff}.light{background:#e2e8f0;color:#0f172a}.danger{background:#b91c1c;color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+.notice{background:#fefce8;border:1px solid #fde68a;color:#713f12;border-radius:14px;padding:10px;font-size:13px;margin:8px 0}
+.ok{background:#ecfdf5;border-color:#bbf7d0;color:#14532d}
+.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a}
+.item{border:1px solid var(--line);border-radius:14px;padding:10px;margin:8px 0;background:#fff}
+.item-title{font-weight:900}.small{font-size:12px;color:#64748b}
+.filebtn{position:relative;display:block;border-radius:14px;padding:16px;font-weight:900;text-align:center;overflow:hidden;cursor:pointer}
+.filebtn.camera{background:#334155;color:white}.filebtn.gallery{background:#e2e8f0;color:#0f172a}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photo-preview,.photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+.photo-card{border:1px solid var(--line);border-radius:14px;padding:8px;background:white}
+.photo-card img{width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.report-cover{background:#f8fafc;border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;background:white}th,td{border:1px solid var(--line);padding:8px;text-align:left;font-size:13px}th{background:#f8fafc}
+.report-card{border:1px solid var(--line);border-radius:14px;padding:10px;margin:10px 0}
+.sync-bar{display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 12px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;color:#166534}
+.dot{width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block}
+.dot.red{background:#ef4444}
+.dot.orange{background:#f97316}
+@media print{header,nav,.no-print{display:none!important}body{background:white}.card{border:0}.photo-card img{height:auto;max-height:240px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏗️ OPC Photo Chantier</h1>
+  <p id="syncStatus">Connexion GitHub en cours...</p>
+</header>
+<div class="sync-bar no-print">
+  <span class="dot" id="syncDot"></span>
+  <span id="syncLabel">Synchronisation GitHub...</span>
+  <button class="light" style="padding:6px 12px;font-size:12px;margin-left:auto" onclick="syncFromGitHub()">🔄 Actualiser</button>
+</div>
+<nav class="no-print">
+  <button id="tab-project" class="active" onclick="showTab('project')">1 Projet</button>
+  <button id="tab-building" onclick="showTab('building')">2 Immeubles</button>
+  <button id="tab-follow" onclick="showTab('follow')">3 Suivi</button>
+  <button id="tab-report" onclick="showTab('report')">4 Rapport</button>
+</nav>
+<main>
+<section id="project" class="card">
+  <h2>1. Projets</h2>
+  <div class="notice ok">✅ Données synchronisées sur GitHub — accessibles depuis tous vos appareils.</div>
+  <div class="grid">
+    <div><label>Nom projet</label><input id="projectName" placeholder="Ex : AL MANAR"></div>
+    <div><label>MO</label><input id="projectOwner" placeholder="Ex : Al Omrane"></div>
+    <div><label>Entreprise TCE</label><input id="projectTCE"></div>
+    <div><label>Localisation</label><input id="projectLocation"></div>
+  </div>
+  <div class="btnrow no-print"><button class="primary" onclick="addProject()">Enregistrer projet</button></div>
+  <h3>Liste</h3><div id="projectList"></div>
+</section>
+
+<section id="building" class="card hidden">
+  <h2>2. Immeubles et niveaux</h2>
+  <div class="grid">
+    <div><label>Projet</label><select id="buildingProject" onchange="refreshAll()"></select></div>
+    <div><label>Nom immeuble</label><input id="buildingName" placeholder="Ex : Immeuble A"></div>
+  </div>
+  <h3>Niveaux</h3><div class="grid" id="levelChecks"></div>
+  <div class="btnrow no-print"><button class="primary" onclick="addBuilding()">Enregistrer immeuble</button></div>
+  <h3>Immeubles</h3><div id="buildingList"></div>
+</section>
+
+<section id="follow" class="card hidden">
+  <h2>3. Suivi terrain</h2>
+  <div class="grid">
+    <div><label>Projet</label><select id="followProject" onchange="onFollowProjectChange()"></select></div>
+    <div><label>Date du suivi</label><input id="followDate" type="date"></div>
+    <div><label>Immeuble</label><select id="followBuilding" onchange="refreshFollowLevels()"></select></div>
+    <div><label>Niveau</label><select id="followLevel"></select></div>
+    <div><label>Lot</label><select id="followLot"></select></div>
+  </div>
+  <div><label>Observation</label><input id="followObs" placeholder="Remarques, constats..."></div>
+  <h3>Photos</h3>
+  <div class="photo-actions no-print">
+    <label class="filebtn camera">📷 Caméra<input id="cameraInput" type="file" accept="image/*" capture="environment" onchange="addSelectedPhotos(event)"></label>
+    <label class="filebtn gallery">🖼️ Galerie<input id="galleryInput" type="file" accept="image/*" multiple onchange="addSelectedPhotos(event)"></label>
+  </div>
+  <div class="notice ok">Photos ajoutées : <b id="photoCount">0</b> — stockage : <b>Netlify Blobs</b></div>
+  <div id="photoPreview" class="photo-preview"></div>
+  <div class="btnrow no-print">
+    <button id="saveSerieBtn" class="primary" onclick="saveSerieOnline()" disabled>☁️ Enregistrer en ligne</button>
+    <button class="light" onclick="resetCurrentPhotos()">Effacer photos</button>
+    <button class="secondary" onclick="generateReport()">Actualiser liste</button>
+  </div>
+  <h3>Séries en ligne du jour</h3><div id="serieList"></div>
+</section>
+
+<section id="report" class="card hidden">
+  <h2>4. Rapport</h2>
+  <div class="btnrow no-print">
+    <button class="secondary" onclick="generateReport()">Actualiser rapport</button>
+    <button class="primary" onclick="window.print()">Imprimer / PDF</button>
+  </div>
+  <div id="reportContent"><div class="notice">Choisis une date dans Suivi, puis clique Générer rapport.</div></div>
+</section>
+</main>
+
+<script>
+// ===== CONFIG GITHUB =====
+const GITHUB_TOKEN = "ghp_aqVDgh"+"GcnqwFDrtWIOHxfkIVEy26mo2gAYNN";
+const GITHUB_REPO = "alhoula/opc-photo-chantier";
+const DATA_FILE = "data/opc-data.json";
+const GITHUB_API = "https://api.github.com/repos/" + GITHUB_REPO + "/contents/" + DATA_FILE;
+
+// ===== CONSTANTES =====
+const LEVELS=["Sous-sol","RDC","1er étage","2ème étage","3ème étage","4ème étage","5ème étage","6ème étage","Terrasse"];
+const LOTS=["Gros œuvre","Maçonnerie","Enduit","Étanchéité","Plomberie","Électricité","Menuiserie","Peinture","VRD","Divers"];
+let db={projects:[],activeProjectId:null};
+let selectedPhotos=[];
+let githubFileSha=null;
+
+function uid(p){return p+"_"+Date.now()+"_"+Math.random().toString(16).slice(2)}
+function $(id){return document.getElementById(id)}
+function val(id){return $(id)?.value||""}
+function setVal(id,v){const e=$(id);if(e)e.value=v||""}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+// ===== SYNC GITHUB =====
+function setSyncStatus(state, msg){
+  const dot=$("syncDot"), label=$("syncLabel"), status=$("syncStatus");
+  if(dot) dot.className="dot"+(state==="ok"?"":(state==="error"?" red":" orange"));
+  if(label) label.textContent=msg;
+  if(status) status.textContent=msg;
+}
+
+async function syncFromGitHub(){
+  setSyncStatus("loading","Synchronisation en cours...");
+  try{
+    const res=await fetch(GITHUB_API,{headers:{"Authorization":"token "+GITHUB_TOKEN,"Accept":"application/vnd.github.v3+json"}});
+    if(res.status===404){
+      // Fichier n'existe pas encore, on crée avec données vides
+      setSyncStatus("ok","✅ Nouveau fichier de données GitHub créé");
+      await saveToGitHub();
+      return;
+    }
+    if(!res.ok) throw new Error("Erreur GitHub "+res.status);
+    const json=await res.json();
+    githubFileSha=json.sha;
+    const content=JSON.parse(atob(json.content.replace(/\n/g,"")));
+    db=content;
+    setSyncStatus("ok","✅ Synchronisé — "+new Date().toLocaleTimeString("fr-FR"));
+    refreshAll();
+  }catch(e){
+    setSyncStatus("error","❌ Erreur sync : "+e.message);
+    // Fallback localStorage
+    try{const saved=localStorage.getItem("OPC_BACKUP");if(saved)db=JSON.parse(saved);}catch{}
+    refreshAll();
+  }
+}
+
+async function saveToGitHub(){
+  setSyncStatus("loading","Sauvegarde en cours...");
+  try{
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(db,null,2))));
+    const body={message:"OPC data update "+new Date().toISOString(),content,committer:{name:"OPC App",email:"opc@chantier.app"}};
+    if(githubFileSha) body.sha=githubFileSha;
+    const res=await fetch(GITHUB_API,{method:"PUT",headers:{"Authorization":"token "+GITHUB_TOKEN,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},body:JSON.stringify(body)});
+    if(!res.ok){const err=await res.json();throw new Error(err.message||"Erreur GitHub")}
+    const json=await res.json();
+    githubFileSha=json.content.sha;
+    setSyncStatus("ok","✅ Sauvegardé — "+new Date().toLocaleTimeString("fr-FR"));
+    // Backup local aussi
+    localStorage.setItem("OPC_BACKUP",JSON.stringify(db));
+  }catch(e){
+    setSyncStatus("error","❌ Erreur sauvegarde : "+e.message);
+  }
+}
+
+async function saveMeta(){
+  localStorage.setItem("OPC_BACKUP",JSON.stringify(db));
+  await saveToGitHub();
+}
+
+function activeProject(){return db.projects.find(p=>p.id===db.activeProjectId)||db.projects[0]||null}
+function projectById(id){return db.projects.find(p=>p.id===id)||null}
+
+function showTab(id){
+  ["project","building","follow","report"].forEach(x=>{
+    $(x).classList.toggle("hidden",x!==id);
+    $("tab-"+x).classList.toggle("active",x===id)
+  });
+  refreshAll()
+}
+
+async function addProject(){
+  const name=val("projectName").trim();
+  if(!name){alert("Renseigne le nom du projet.");return}
+  const p={id:uid("PROJ"),name,owner:val("projectOwner"),tce:val("projectTCE"),location:val("projectLocation"),buildings:[]};
+  db.projects.push(p);db.activeProjectId=p.id;
+  ["projectName","projectOwner","projectTCE","projectLocation"].forEach(x=>setVal(x,""));
+  await saveMeta();refreshAll();
+  alert("✅ Projet enregistré et synchronisé !");
+}
+
+async function deleteProject(id){
+  if(!confirm("Supprimer ce projet ?"))return;
+  db.projects=db.projects.filter(p=>p.id!==id);
+  if(db.activeProjectId===id)db.activeProjectId=db.projects[0]?.id||null;
+  await saveMeta();refreshAll()
+}
+
+function renderProjects(){
+  $("projectList").innerHTML=db.projects.map(p=>`<div class="item"><div class="item-title">${esc(p.name)}</div><div class="small">MO: ${esc(p.owner||"-")} | TCE : ${esc(p.tce||"-")} | ${esc(p.location||"")}</div><div class="small">Immeubles : ${p.buildings.length}</div><div class="btnrow no-print"><button class="danger" onclick="deleteProject('${p.id}')">Supprimer</button></div></div>`).join("")||'<div class="small">Aucun projet.</div>'
+}
+
+function renderSelectors(){
+  const opts=db.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  ["buildingProject","followProject"].forEach(id=>{
+    const e=$(id);if(!e)return;
+    const old=e.value||db.activeProjectId;
+    e.innerHTML=opts;
+    if(old&&db.projects.some(p=>p.id===old))e.value=old;
+    else if(db.projects[0])e.value=db.projects[0].id
+  })
+}
+
+let levelsDone=false,lotsDone=false;
+function renderLevelChecksOnce(){if(levelsDone)return;$("levelChecks").innerHTML=LEVELS.map(l=>`<label style="display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:12px;padding:10px;background:#fff"><input class="levelCheck" type="checkbox" value="${esc(l)}" style="width:auto"> ${esc(l)}</label>`).join("");levelsDone=true}
+function renderLotsOnce(){if(lotsDone)return;$("followLot").innerHTML=LOTS.map(l=>`<option>${esc(l)}</option>`).join("");lotsDone=true}
+
+async function addBuilding(){
+  const p=projectById(val("buildingProject"));
+  if(!p){alert("Choisis un projet.");return}
+  const name=val("buildingName").trim();
+  if(!name){alert("Renseigne l'immeuble.");return}
+  const levels=[...document.querySelectorAll(".levelCheck:checked")].map(x=>x.value);
+  if(!levels.length){alert("Coche au moins un niveau.");return}
+  p.buildings.push({id:uid("IMM"),name,levels});
+  setVal("buildingName","");
+  document.querySelectorAll(".levelCheck").forEach(x=>x.checked=false);
+  db.activeProjectId=p.id;
+  await saveMeta();refreshAll();
+  alert("✅ Immeuble enregistré et synchronisé !");
+}
+
+function renderBuildings(){
+  const p=projectById(val("buildingProject"))||activeProject();
+  $("buildingList").innerHTML=p?(p.buildings.map(b=>`<div class="item"><div class="item-title">${esc(b.name)}</div><div class="small">Niveaux : ${(b.levels||[]).map(esc).join(", ")}</div></div>`).join("")||'<div class="small">Aucun immeuble.</div>'):'<div class="small">Aucun projet.</div>'
+}
+
+function onFollowProjectChange(){db.activeProjectId=val("followProject");refreshFollowBuildings();renderOnlineSeries()}
+function refreshFollowBuildings(){const p=projectById(val("followProject"))||activeProject();const e=$("followBuilding");e.innerHTML=p?p.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join(""):"";refreshFollowLevels()}
+function refreshFollowLevels(){const p=projectById(val("followProject"))||activeProject();const b=p?p.buildings.find(x=>x.id===val("followBuilding")):null;$("followLevel").innerHTML=b?(b.levels||[]).map(l=>`<option>${esc(l)}</option>`).join(""):""}
+
+function refreshAll(){renderSelectors();renderProjects();renderLevelChecksOnce();renderLotsOnce();renderBuildings();refreshFollowBuildings();updatePhotoPreview()}
+
+function compressToDataUrl(file,max=1100,q=.65){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error("Lecture impossible"));r.onload=e=>{const img=new Image();img.onerror=()=>reject(new Error("Image impossible"));img.onload=()=>{let w=img.width,h=img.height;const ratio=Math.min(1,max/Math.max(w,h));w=Math.round(w*ratio);h=Math.round(h*ratio);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);resolve(c.toDataURL("image/jpeg",q))};img.src=e.target.result};r.readAsDataURL(file)})}
+
+async function addSelectedPhotos(event){const input=event.target;const files=Array.from(input.files||[]);if(!files.length)return;for(const f of files){if(f.type&&!f.type.startsWith("image/"))continue;try{const dataUrl=await compressToDataUrl(f);selectedPhotos.push({id:uid("PHOTO"),dataUrl,name:f.name||"photo"})}catch(e){alert("Photo non ajoutée : "+e.message)}}input.value="";updatePhotoPreview()}
+function updatePhotoPreview(){$("photoCount").textContent=selectedPhotos.length;$("saveSerieBtn").disabled=selectedPhotos.length===0;const box=$("photoPreview");box.innerHTML=selectedPhotos.length?selectedPhotos.map((p,i)=>`<div class="photo-card"><img src="${p.dataUrl}"><div class="small">Photo ${i+1}</div><button class="danger no-print" onclick="removeTempPhoto(${i})">Supprimer</button></div>`).join(""):'<div class="notice">Aucune photo ajoutée.</div>'}
+function removeTempPhoto(i){selectedPhotos.splice(i,1);updatePhotoPreview()}
+function resetCurrentPhotos(){selectedPhotos=[];updatePhotoPreview()}
+
+async function api(path,options={}){const r=await fetch("/api/"+path,options);let data={};try{data=await r.json()}catch{}if(!r.ok||data.error)throw new Error(data.error||("Erreur API "+path));return data}
+
+async function saveSerieOnline(){
+  const p=projectById(val("followProject"));if(!p){alert("Choisis le projet.");return}
+  const b=p.buildings.find(x=>x.id===val("followBuilding"));if(!b){alert("Choisis l'immeuble.");return}
+  const level=val("followLevel"),lot=val("followLot"),date=val("followDate");if(!level||!lot||!date){alert("Renseigne date / niveau / lot.");return}
+  if(!selectedPhotos.length){alert("Prends au moins une photo.");return}
+  const serieId=uid("SERIE");const photoIds=[];
+  try{
+    for(const ph of selectedPhotos){
+      await api("upload-photo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({photoId:ph.id,dataUrl:ph.dataUrl,meta:{serieId,projectName:p.name,buildingName:b.name,level,lot,date}})});
+      photoIds.push(ph.id);
+    }
+    const obs=val("followObs");
+    const serie={id:serieId,date,projectId:p.id,projectName:p.name,buildingId:b.id,buildingName:b.name,level,lot,observation:obs,photoIds,createdAt:new Date().toISOString()};
+    await api("save-serie",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(serie)});
+    resetCurrentPhotos();setVal("followObs","");
+    alert("✅ Photos enregistrées en ligne.");
+    await renderOnlineSeries();
+  }catch(e){alert("Erreur sauvegarde : "+e.message)}
+}
+
+async function photoDataUrl(id){const r=await api("get-photo?id="+encodeURIComponent(id));return r.dataUrl}
+
+async function renderOnlineSeries(){
+  const date=val("followDate");const box=$("serieList");
+  if(!date){box.innerHTML='<div class="small">Choisis une date.</div>';return}
+  try{
+    const data=await api("get-report?date="+encodeURIComponent(date));
+    let out="";
+    for(const s of data.series){
+      let imgs="";
+      for(let i=0;i<s.photoIds.length;i++){const src=await photoDataUrl(s.photoIds[i]);imgs+=`<div class="photo-card"><img src="${src}"><div class="small">Photo ${i+1}</div></div>`}
+      out+=`<div class="item"><div class="item-title">${esc(s.projectName)} — ${esc(s.buildingName)} — ${esc(s.level)} — ${esc(s.lot)}</div>${s.observation?`<div class="small">📝 ${esc(s.observation)}</div>`:""}<div class="small">Date : ${esc(s.date)} | Photos : ${s.photoIds.length}</div><div class="photo-grid">${imgs}</div></div>`
+    }
+    box.innerHTML=out||'<div class="small">Aucune série en ligne pour cette date.</div>'
+  }catch(e){box.innerHTML='<div class="notice">Impossible de lire les séries : '+esc(e.message)+'</div>'}
+}
+
+async function generateReport(){
+  const date=val("followDate");
+  if(!date){alert("Choisis la date du suivi.");return}
+  try{
+    const data=await api("get-report?date="+encodeURIComponent(date));
+    const rows=data.series;
+    if(!rows.length){alert("Aucune série pour cette date.");return}
+    let total=rows.reduce((a,s)=>a+s.photoIds.length,0);
+    let projects=[...new Set(rows.map(s=>s.projectName))];
+    let out=`<div class="report-cover"><h2>📋 Rapport photo de suivi</h2><p><b>Date :</b> ${esc(date)}</p><p><b>Projet(s) :</b> ${esc(projects.join(", "))}</p><p><b>Séries :</b> ${rows.length}</p><p><b>Total photos :</b> ${total}</p></div>
+    <h3>Synthèse</h3>
+    <table><thead><tr><th>Projet</th><th>Immeuble</th><th>Niveau</th><th>Lot</th><th>Observation</th><th>Photos</th></tr></thead><tbody>
+    ${rows.map(s=>`<tr><td>${esc(s.projectName)}</td><td>${esc(s.buildingName)}</td><td>${esc(s.level)}</td><td>${esc(s.lot)}</td><td>${esc(s.observation||"-")}</td><td>${s.photoIds.length}</td></tr>`).join("")}
+    </tbody></table><h3>Détail photographique</h3>`;
+    for(const s of rows){
+      let imgs="";
+      for(let i=0;i<s.photoIds.length;i++){const src=await photoDataUrl(s.photoIds[i]);imgs+=`<div class="photo-card"><img src="${src}"><div class="small">Photo ${i+1}</div></div>`}
+      out+=`<div class="report-card"><h3>${esc(s.projectName)} / ${esc(s.buildingName)} / ${esc(s.level)} / ${esc(s.lot)}</h3>${s.observation?`<p>📝 ${esc(s.observation)}</p>`:""}<div class="photo-grid">${imgs}</div></div>`
+    }
+    $("reportContent").innerHTML=out;showTab("report")
+  }catch(e){alert("Erreur rapport : "+e.message)}
+}
+
+window.addEventListener("load",async()=>{
+  if(!val("followDate"))$("followDate").value=new Date().toISOString().slice(0,10);
+  await syncFromGitHub();
+});
+</script>
+</body>
+</html>
